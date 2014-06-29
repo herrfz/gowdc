@@ -17,8 +17,8 @@ func main() {
 		"use emulated (true) or real CoordNode (false)")
 	flag.Parse()
 
-    dl_chan := make(chan []byte, 1)
-    c_ul_chan := make(chan []byte, 1)
+	dl_chan := make(chan []byte, 1)
+	c_ul_chan := make(chan []byte, 1)
 	d_ul_chan := make(chan []byte, 1)
 
 	if *emulated {
@@ -29,6 +29,6 @@ func main() {
 	}
 	// Handle connections in a goroutine
 	go listeners.ListenTCP(HOST, TCP_PORT, INTERFACE,
-        dl_chan, c_ul_chan, d_ul_chan)
+		dl_chan, c_ul_chan, d_ul_chan)
 	select {}
 }

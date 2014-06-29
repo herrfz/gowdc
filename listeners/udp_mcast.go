@@ -13,8 +13,7 @@ import (
 // - addr: multicast group/address to listen to
 // - port: port number; addr:port builds the mcast socket
 // - iface: name of network interface to listen to
-// - dl_chan: channel for sending downlink messages
-// - ul_chan: channel for sending uplink messages
+// - dl_chan: channel for sending downlink data
 func ListenUDPMcast(addr, port, iface string, dl_chan chan []byte) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
@@ -63,7 +62,7 @@ func ListenUDPMcast(addr, port, iface string, dl_chan chan []byte) {
 		// process data that are sent to group
 		if cm.Dst.IsMulticast() && cm.Dst.Equal(group) {
 			// TODO test this if-block
-			if (int(buf[0])+1) != dlen {
+			if dlen == 0 || (int(buf[0])+1) != dlen {
 				fmt.Println("Error: Inconsistent message length")
 				msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
 			}
