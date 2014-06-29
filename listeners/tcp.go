@@ -82,6 +82,8 @@ func ListenTCP(host, tcp_port, iface string,
 
 				msg.WDC_GET_STATUS_RES[0] = byte(dlen)
 				copy(msg.WDC_GET_STATUS_RES[3:], buf[2:])
+				// orig msg is very long with trailing zeroes
+				// truncate to dlen
 				msg.WDC_GET_STATUS_RES = msg.WDC_GET_STATUS_RES[:dlen+1]
 
 				// send message to CoordNode and get a return
@@ -158,6 +160,9 @@ func ListenTCP(host, tcp_port, iface string,
 					// send disconnect to CoordNode (bye)
 					dl_chan <- buf[:dlen]
 					msg.WDC_DISCONNECTION_REQ_ACK = <-c_ul_chan
+					// stop listening to CoordNode channel
+					close(d_ul_chan)
+					// send disconnect ack to server
 					t_conn.Write(msg.WDC_DISCONNECTION_REQ_ACK)
 					fmt.Println("sent disconnection request ack, bye!")
 				}
@@ -180,14 +185,20 @@ func ListenTCP(host, tcp_port, iface string,
 
 				} else {
 
-					if buf[1] == 0x07 {
-						fmt.Println("received long address set req")
-						dl_chan <- buf[:dlen]
-						msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK = <-c_ul_chan
-						t_conn.Write(msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK)
-						fmt.Println("sent long address set ack")
+					fmt.Println("received long address set req")
+					dl_chan <- buf[:dlen]
+					cn_buf := <-c_ul_chan
 
-					} else {
+					if int(cn_buf[0]+1) != len(cn_buf) {
+						fmt.Println("Error reading from CoordNode")
+						continue
+					}
+
+					copy(msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK, cn_buf)
+					t_conn.Write(msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK)
+					fmt.Println("sent long address set ack")
+
+					if buf[1] == 0x09 {
 						fmt.Println("received reset request")
 						t_conn.Write(msg.WDC_RESET_REQ_ACK)
 						fmt.Println("sent reset ack, bye!")
@@ -203,5 +214,6 @@ func ListenTCP(host, tcp_port, iface string,
 				t_conn.Write(msg.WDC_ERROR)
 			}
 		}
+		// TODO cleanup on exiting loop
 	}
 }

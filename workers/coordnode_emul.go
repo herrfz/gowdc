@@ -39,7 +39,6 @@ func EmulCoordNode(dl_chan, c_ul_chan, d_ul_chan chan []byte) {
 				hex.EncodeToString(buf))
 			msg.WDC_GET_TDMA_RES[2] = 0x01 // running
 			copy(msg.WDC_GET_TDMA_RES[3:], buf[2:])
-
 			msg.WDC_ACK[1] = 0x12 // START_TDMA_REQ_ACK
 			d_ul_chan <- msg.WDC_ACK
 			fmt.Println("TDMA started")
