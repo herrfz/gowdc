@@ -13,11 +13,9 @@ import (
 // - addr: multicast group/address to listen to
 // - port: port number; addr:port builds the mcast socket
 // - iface: name of network interface to listen to
-// - u_conn: UDP return channel
 // - dl_chan: channel for sending downlink messages
 // - ul_chan: channel for sending uplink messages
-func ListenUDPMcast(addr, port, iface string, u_conn *net.UDPConn,
-    dl_chan, ul_chan chan []byte) {
+func ListenUDPMcast(addr, port, iface string, dl_chan chan []byte) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
 		fmt.Println("Error interface: ", err.Error())
@@ -65,51 +63,12 @@ func ListenUDPMcast(addr, port, iface string, u_conn *net.UDPConn,
 		// process data that are sent to group
 		if cm.Dst.IsMulticast() && cm.Dst.Equal(group) {
 			// TODO test this if-block
-			if dlen == 0 || (int(buf[0])+1) != dlen {
+			if (int(buf[0])+1) != dlen {
 				fmt.Println("Error: Inconsistent message length")
 				msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
 			}
 
-			switch buf[1] {
-			case 0x10: // syn TDMA
-				fmt.Println("sync-ing WDC")
-
-			case 0x11: // start TDMA
-				fmt.Println("starting TDMA")
-				copy(msg.WDC_GET_TDMA_RES[:],
-					[]byte{byte(dlen + 1), 0x16, 0x01})
-				copy(msg.WDC_GET_TDMA_RES[3:], buf[2:])
-
-				// TODO write serial
-
-				// send back ACK via UDP
-                msg.WDC_ACK[1] = 0x12  // START_TDMA_REQ_ACK
-                u_conn.Write(msg.WDC_ACK)
-
-			case 0x13: // stop TDMA
-				fmt.Println("stopping TDMA")
-				// send back ACK
-                msg.WDC_ACK[1] = 0x14  // STOP_TDMA_REQ_ACK
-                u_conn.Write(msg.WDC_ACK)
-
-			case 0x15: // TDMA status
-				fmt.Println("sending TDMA status response")
-
-				// TODO read serial (get status)
-
-				// TODO send back WDC_GET_TDMA_RES via UDP
-
-			case 0x17:  // data request
-				fmt.Println("data request")
-
-				// TODO
-
-			default:
-				fmt.Println("wrong cmd")
-				// send back WDC_ERROR via UDP
-                msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
-                u_conn.Write(msg.WDC_ERROR)
-			}
+			dl_chan <- buf[:dlen]
 
 		} else {
 			// unknown group / not udp mcast, discard

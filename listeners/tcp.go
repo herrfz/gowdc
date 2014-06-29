@@ -4,6 +4,7 @@ package listeners
 import (
 	"bytes"
 	"encoding/binary"
+    "encoding/hex"
 	"fmt"
 	msg "github.com/herrfz/gowdc/messages"
 	"net"
@@ -11,12 +12,9 @@ import (
 	"strings"
 )
 
-const (
-	INTERFACE = "eth0"
-)
-
 // The listeners
-func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
+func ListenTCP(host, tcp_port, iface string,
+	dl_chan, c_ul_chan, d_ul_chan chan []byte) {
 	// WDC state
 	connected := 0
 
@@ -61,6 +59,7 @@ func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
 
 			switch buf[1] {
 			case 0x01: // WDC_CONNECTION_REQ
+                fmt.Println("received connection request")
 				// TODO: check expected len of WDC_CONNECTION_REQ
 				if dlen < 10 { // <-- this is currently arbitrary
 					fmt.Println("Error: wrong WDC_CONNECTION_REQ len")
@@ -69,33 +68,26 @@ func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
 
 				if connected == 1 {
 					msg.WDC_ERROR[2] = byte(msg.BUSY_CONNECTED)
-					_, err := t_conn.Write(msg.WDC_ERROR)
-                    if err != nil {
-                        fmt.Println("Error sending WDC_ERROR: ",
-                            err.Error())
-                    }
+					t_conn.Write(msg.WDC_ERROR)
 					continue
 				}
 
 				msg.WDC_GET_STATUS_RES[0] = byte(dlen)
 				copy(msg.WDC_GET_STATUS_RES[3:], buf[2:])
+                msg.WDC_GET_STATUS_RES = msg.WDC_GET_STATUS_RES[:dlen+1]
 
 				// send message to CoordNode and get a return
-                dl_chan <- buf[:dlen]
-                cn_buf := <- ul_chan
-                
-                if int(cn_buf[0] + 1) != len(cn_buf) ||
-                cn_buf[1] != 0x02 {  // WDC_CONNECTION_RES
-                    fmt.Println("Error on reading from CoordNode")
-                    msg.WDC_ERROR[2] = byte(msg.SERIAL_PORT)
-                    _, err := t_conn.Write(msg.WDC_ERROR)
-                    if err != nil {
-                        fmt.Println("Error sending WDC_ERROR: ",
-                            err.Error())
-                    }
-                    continue
-                }
-                copy(msg.WDC_CONNECTION_RES, cn_buf)
+				dl_chan <- buf[:dlen]
+				cn_buf := <-c_ul_chan
+
+				if int(cn_buf[0]+1) != len(cn_buf) ||
+					cn_buf[1] != 0x02 { // WDC_CONNECTION_RES
+					fmt.Println("Error on reading from CoordNode")
+					msg.WDC_ERROR[2] = byte(msg.SERIAL_PORT)
+					t_conn.Write(msg.WDC_ERROR)
+					continue
+				}
+				copy(msg.WDC_CONNECTION_RES, cn_buf)
 
 				// get multicast info
 				var MCAST_PORT uint16
@@ -126,15 +118,11 @@ func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
 				if err != nil {
 					fmt.Println("Error server UDP: ", err.Error())
 					msg.WDC_ERROR[2] = byte(msg.CONNECTING)
-					_, err := t_conn.Write(msg.WDC_ERROR)
-                    if err != nil {
-                        fmt.Println("Error sending WDC_ERROR: ",
-                            err.Error())
-                    }
+					t_conn.Write(msg.WDC_ERROR)
 					continue
 				}
 				fmt.Printf("Server UDP is at: %s:%d\n",
-                    SERVER_IP, SERVER_UDP_PORT)
+					SERVER_IP, SERVER_UDP_PORT)
 				// close UDP when the application closes
 				defer u_conn.Close()
 
@@ -144,73 +132,61 @@ func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
 					0xde, 0xad, 0xbe, 0xef}
 				copy(msg.WDC_CONNECTION_RES[2:], fake)
 				// reply to server
-				_, err = t_conn.Write(msg.WDC_CONNECTION_RES)
-                if err != nil {
-                    fmt.Println("Error sending WDC_CONNECTION_RES: ",
-                        err.Error())
-                }
+				t_conn.Write(msg.WDC_CONNECTION_RES)
+                fmt.Println("sent connection response: ",
+                    hex.EncodeToString(msg.WDC_CONNECTION_RES))
 
 				// Serve UDP mcast in a new goroutine
 				go ListenUDPMcast(string(MCAST_ADDR),
-					fmt.Sprintf("%d", MCAST_PORT), INTERFACE, u_conn,
-                    dl_chan, ul_chan)
+					fmt.Sprintf("%d", MCAST_PORT), iface, dl_chan)
+
+                // Start listening to CoordNode channel
+                go ListenCoordNode(d_ul_chan, u_conn)
 
 				connected = 1
 
 			case 0x03: // WDC_DISCONNECTION_REQ
-				if connected == 1 {
+				fmt.Println("received disconnection request")
+                if connected == 1 {
 					// TODO stop listening UDP mcast
 					// TODO u_conn.Close() (u_conn undefined)
 
-                    // send disconnect to CoordNode (bye)
-                    dl_chan <- buf[:dlen]
-                    msg.WDC_DISCONNECTION_REQ_ACK = <- ul_chan
-					_, err := t_conn.Write(
-                        msg.WDC_DISCONNECTION_REQ_ACK)
-                    if err != nil {
-                        fmt.Println("Error sending WDC_DISC_REQ_ACK: ",
-                            err.Error())
-                    }
+					// send disconnect to CoordNode (bye)
+					dl_chan <- buf[:dlen]
+					msg.WDC_DISCONNECTION_REQ_ACK = <-c_ul_chan
+					t_conn.Write(msg.WDC_DISCONNECTION_REQ_ACK)
+                    fmt.Println("sent disconnection request ack, bye!")
 				}
 
 				connected = 0
 
 			case 0x05: // WDC_GET_STATUS_REQ
-				msg.WDC_GET_STATUS_RES[2] = byte(connected)
-				_, err := t_conn.Write(msg.WDC_GET_STATUS_RES)
-                if err != nil {
-                    fmt.Println("Error sending WDC_GET_STATUS_RES: ",
-                        err.Error())
-                }
+				fmt.Println("received WDC status request")
+                msg.WDC_GET_STATUS_RES[2] = byte(connected)
+				t_conn.Write(msg.WDC_GET_STATUS_RES)
+                fmt.Println("sent WDC status response: ",
+                    hex.EncodeToString(msg.WDC_GET_STATUS_RES))
 
 			case 0x07, 0x09:
 				// WDC_SET_COOR_LONG_ADDR_REQ ||
 				// WDC_RESET_REQ
 				if connected == 1 {
 					msg.WDC_ERROR[2] = byte(msg.BUSY_CONNECTED)
-					_, err := t_conn.Write(msg.WDC_ERROR)
-                    if err != nil {
-                    fmt.Println("Error sending WDC_ERROR: ",
-                        err.Error())
-                    }
+					t_conn.Write(msg.WDC_ERROR)
 
 				} else {
 
 					if buf[1] == 0x07 {
-                        dl_chan <- buf[:dlen]
-                        msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK = <- ul_chan
-						_, err := t_conn.Write(msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK)
-                        if err != nil {
-                            fmt.Println("Error send LONG_ADDR_ACK: ",
-                                err.Error())
-                        }
+                        fmt.Println("received long address set req")
+						dl_chan <- buf[:dlen]
+						msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK = <-c_ul_chan
+						t_conn.Write(msg.WDC_SET_COOR_LONG_ADDR_REQ_ACK)
+                        fmt.Println("sent long address set ack")
 
 					} else {
-						_, err := t_conn.Write(msg.WDC_RESET_REQ_ACK)
-                        if err != nil {
-                            fmt.Println("Error send RESET_ACK: ",
-                                err.Error())
-                        }
+                        fmt.Println("received reset request")
+						t_conn.Write(msg.WDC_RESET_REQ_ACK)
+                        fmt.Println("sent reset ack, bye!")
 						// Exit will close UDP, TCP, UDP mcast
 						// TODO: serial; reboot instead of app exit
 						os.Exit(0)
@@ -218,15 +194,12 @@ func ListenTCP(host, tcp_port string, dl_chan, ul_chan chan []byte) {
 				}
 
 			default:
+                fmt.Println("received unknown command")
 				msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
-				_, err := t_conn.Write(msg.WDC_ERROR)
-                if err != nil {
-                    fmt.Println("Error sending WDC_ERROR: ",
-                        err.Error())
-                }
+				t_conn.Write(msg.WDC_ERROR)
 			}
 		}
 
-        // TODO send WDC_DISCONNECTION_REQ to CoordNode
+		// TODO send WDC_DISCONNECTION_REQ to CoordNode
 	}
 }
