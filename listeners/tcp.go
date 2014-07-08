@@ -10,19 +10,23 @@ import (
 	"net"
 	"os"
 	"strings"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // args:
 // - host: hostname
 // - tcp_port: port number; host:port builds the tcp socket
 // - iface: name of network interface to listen to
-// - dl_chan: channel for sending downlink data
-// - c_ul_chan: channel for receiving uplink commands
-// - d_ul_chan: channel for receiving uplink data
+// - c_sock: 
+// - d_dl_sock: 
+// - d_ul_sock: 
 func ListenTCP(host, tcp_port, iface string,
-	dl_chan, c_ul_chan, d_ul_chan chan []byte) {
+	c_sock, d_dl_sock, d_ul_sock *zmq.Socket) {
 	// WDC state
 	connected := 0
+
+	// control channel to stop listening to coordnode
+	ctrl := make(chan int)
 
 	// Listen for TCP incoming connections
 	t, err := net.Listen("tcp", host+":"+tcp_port)
@@ -87,8 +91,8 @@ func ListenTCP(host, tcp_port, iface string,
 				msg.WDC_GET_STATUS_RES = msg.WDC_GET_STATUS_RES[:dlen+1]
 
 				// send message to CoordNode and get a return
-				dl_chan <- buf[:dlen]
-				cn_buf := <-c_ul_chan
+				c_sock.Send(string(buf[:dlen]), 0)
+				cn_buf, _ := c_sock.Recv(0)
 
 				if int(cn_buf[0]+1) != len(cn_buf) ||
 					cn_buf[1] != 0x02 { // WDC_CONNECTION_RES
@@ -144,10 +148,10 @@ func ListenTCP(host, tcp_port, iface string,
 
 				// Serve UDP mcast in a new goroutine
 				go ListenUDPMcast(string(MCAST_ADDR),
-					fmt.Sprintf("%d", MCAST_PORT), iface, dl_chan)
+					fmt.Sprintf("%d", MCAST_PORT), iface, d_dl_sock)
 
-				// Start listening to CoordNode channel
-				go ListenCoordNode(d_ul_chan, u_conn)
+				// Start listening to CoordNode
+				go ListenCoordNode(ctrl, d_ul_sock, u_conn)
 
 				connected = 1
 
@@ -158,10 +162,11 @@ func ListenTCP(host, tcp_port, iface string,
 					// TODO u_conn.Close() (u_conn undefined)
 
 					// send disconnect to CoordNode (bye)
-					dl_chan <- buf[:dlen]
-					msg.WDC_DISCONNECTION_REQ_ACK = <-c_ul_chan
-					// stop listening to CoordNode channel
-					close(d_ul_chan)
+					c_sock.Send(string(buf[:dlen]), 0)
+					req_ack, _ := c_sock.Recv(0)
+					msg.WDC_DISCONNECTION_REQ_ACK = []byte(req_ack)
+					// stop listening to CoordNode
+					//ctrl <-1  // TODO this doesn't work yet
 					// send disconnect ack to server
 					t_conn.Write(msg.WDC_DISCONNECTION_REQ_ACK)
 					fmt.Println("sent disconnection request ack, bye!")
@@ -186,8 +191,9 @@ func ListenTCP(host, tcp_port, iface string,
 				} else {
 
 					fmt.Println("received long address set req")
-					dl_chan <- buf[:dlen]
-					cn_buf := <-c_ul_chan
+
+					c_sock.Send(string(buf[:dlen]), 0)
+					cn_buf, _ := c_sock.Recv(0)
 
 					if int(cn_buf[0]+1) != len(cn_buf) {
 						fmt.Println("Error reading from CoordNode")

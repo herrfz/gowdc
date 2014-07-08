@@ -7,14 +7,15 @@ import (
 	msg "github.com/herrfz/gowdc/messages"
 	"net"
 	"os"
+	zmq "github.com/pebbe/zmq4"
 )
 
 // args:
 // - addr: multicast group/address to listen to
 // - port: port number; addr:port builds the mcast socket
 // - iface: name of network interface to listen to
-// - dl_chan: channel for sending downlink data
-func ListenUDPMcast(addr, port, iface string, dl_chan chan []byte) {
+// - d_dl_sock: 
+func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
 		fmt.Println("Error interface: ", err.Error())
@@ -67,7 +68,7 @@ func ListenUDPMcast(addr, port, iface string, dl_chan chan []byte) {
 				msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
 			}
 
-			dl_chan <- buf[:dlen]
+			d_dl_sock.Send(string(buf[:dlen]), 0)
 
 		} else {
 			// unknown group / not udp mcast, discard
