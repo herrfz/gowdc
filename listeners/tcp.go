@@ -166,7 +166,7 @@ func ListenTCP(host, tcp_port, iface string,
 					req_ack, _ := c_sock.Recv(0)
 					msg.WDC_DISCONNECTION_REQ_ACK = []byte(req_ack)
 					// stop listening to CoordNode
-					//ctrl <-1  // TODO this doesn't work yet
+					//ctrl <- 1  // TODO this doesn't work yet
 					// send disconnect ack to server
 					t_conn.Write(msg.WDC_DISCONNECTION_REQ_ACK)
 					fmt.Println("sent disconnection request ack, bye!")

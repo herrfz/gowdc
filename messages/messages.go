@@ -15,6 +15,7 @@ var (
 	WDC_ACK                        = make([]byte, 2)
 	WDC_GET_TDMA_RES               = make([]byte, 24)
 	WDC_MAC_DATA_CON               = make([]byte, 4)
+	WDC_MAC_DATA_IND			   = make([]byte, 135)
 )
 
 //
@@ -38,4 +39,5 @@ func init() {
 	copy(WDC_ACK[:], []byte{1})
 	copy(WDC_GET_TDMA_RES[:], []byte{23, 0x16})
 	copy(WDC_MAC_DATA_CON[:], []byte{3, 0x18})
+	copy(WDC_MAC_DATA_IND[:], []byte{134, 0x19})
 }
