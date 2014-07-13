@@ -7,19 +7,19 @@ import (
 	"encoding/hex"
 	"fmt"
 	msg "github.com/herrfz/gowdc/messages"
+	zmq "github.com/pebbe/zmq4"
 	"net"
 	"os"
 	"strings"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // args:
 // - host: hostname
 // - tcp_port: port number; host:port builds the tcp socket
 // - iface: name of network interface to listen to
-// - c_sock: 
-// - d_dl_sock: 
-// - d_ul_sock: 
+// - c_sock:
+// - d_dl_sock:
+// - d_ul_sock:
 func ListenTCP(host, tcp_port, iface string,
 	c_sock, d_dl_sock, d_ul_sock *zmq.Socket) {
 	// WDC state
@@ -54,6 +54,7 @@ func ListenTCP(host, tcp_port, iface string,
 			// Read the incoming data from accepted conn into the buffer
 			// this blocks until some data are actually received
 			dlen, err := t_conn.Read(buf)
+			fmt.Println("received TCP command")
 			if err != nil {
 				if err.Error() == "EOF" {
 					os.Exit(0)

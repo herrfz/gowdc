@@ -5,16 +5,16 @@ import (
 	"code.google.com/p/go.net/ipv4"
 	"fmt"
 	msg "github.com/herrfz/gowdc/messages"
+	zmq "github.com/pebbe/zmq4"
 	"net"
 	"os"
-	zmq "github.com/pebbe/zmq4"
 )
 
 // args:
 // - addr: multicast group/address to listen to
 // - port: port number; addr:port builds the mcast socket
 // - iface: name of network interface to listen to
-// - d_dl_sock: 
+// - d_dl_sock:
 func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
@@ -55,6 +55,7 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket) {
 		// read incoming data into the buffer
 		// this blocks until some data are actually received
 		dlen, cm, _, err := p.ReadFrom(buf)
+		fmt.Println("received UDP multicast")
 		if err != nil {
 			fmt.Println("Error reading: ", err.Error())
 			continue

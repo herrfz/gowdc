@@ -15,7 +15,7 @@ var (
 	WDC_ACK                        = make([]byte, 2)
 	WDC_GET_TDMA_RES               = make([]byte, 24)
 	WDC_MAC_DATA_CON               = make([]byte, 4)
-	WDC_MAC_DATA_IND			   = make([]byte, 135)
+	WDC_MAC_DATA_IND               = make([]byte, 135)
 )
 
 //

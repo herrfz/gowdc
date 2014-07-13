@@ -3,8 +3,8 @@ package listeners
 
 import (
 	"fmt"
-	"net"
 	zmq "github.com/pebbe/zmq4"
+	"net"
 )
 
 func ListenCoordNode(ctrl chan int, d_ul_sock *zmq.Socket, u_conn *net.UDPConn) {
@@ -15,8 +15,10 @@ func ListenCoordNode(ctrl chan int, d_ul_sock *zmq.Socket, u_conn *net.UDPConn) 
 		//case <-ctrl:
 		//	break
 		//default:
-			cn_buf, _ := d_ul_sock.Recv(0)
-			u_conn.Write([]byte(cn_buf))
+		cn_buf, _ := d_ul_sock.Recv(0)
+		fmt.Println("received from coordinator node")
+		u_conn.Write([]byte(cn_buf))
+		fmt.Println("sent over UDP")
 		//}
 	}
 }
