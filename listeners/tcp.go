@@ -28,6 +28,9 @@ func ListenTCP(host, tcp_port, iface string,
 	// control channel to stop listening to coordnode
 	ctrl := make(chan int)
 
+	// control channel to stop listening udp mcast
+	mcast_stopch := make(chan bool)
+
 	// Listen for TCP incoming connections
 	t, err := net.Listen("tcp", host+":"+tcp_port)
 	if err != nil {
@@ -57,7 +60,8 @@ func ListenTCP(host, tcp_port, iface string,
 			fmt.Println("received TCP command")
 			if err != nil {
 				if err.Error() == "EOF" {
-					os.Exit(0)
+					mcast_stopch <- true
+					break
 				} else {
 					fmt.Println("Error reading: ", err.Error())
 					os.Exit(1)
@@ -149,7 +153,7 @@ func ListenTCP(host, tcp_port, iface string,
 
 				// Serve UDP mcast in a new goroutine
 				go ListenUDPMcast(string(MCAST_ADDR),
-					fmt.Sprintf("%d", MCAST_PORT), iface, d_dl_sock)
+					fmt.Sprintf("%d", MCAST_PORT), iface, d_dl_sock, mcast_stopch)
 
 				// Start listening to CoordNode
 				go ListenCoordNode(ctrl, d_ul_sock, u_conn)
