@@ -9,25 +9,17 @@ import (
 	"net"
 )
 
-/*type MCastObj struct {
-	dlen int
-	cm   *ipv4.ControlMessage
-	err  error
-	buf  []byte
-}*/
-
-type Socket struct {
-	zz *ipv4.PacketConn
-	group net.IP // TODO
+type UMSocket struct {
+	socket *ipv4.PacketConn
+	group  net.IP
 }
 
-func (sock Socket) Read() ([]byte, error) {
+func (sock UMSocket) Read() ([]byte, error) {
 	buf := make([]byte, 1024)
 	// read incoming data into the buffer
 	// this blocks until some data are actually received
-	dlen, cm, _, err := sock.zz.ReadFrom(buf)
+	dlen, cm, _, err := sock.socket.ReadFrom(buf)
 	if err != nil {
-		fmt.Println("Error reading: ", err.Error())
 		return nil, err
 	}
 
@@ -35,17 +27,14 @@ func (sock Socket) Read() ([]byte, error) {
 	if cm.Dst.IsMulticast() && cm.Dst.Equal(sock.group) {
 		// TODO test this if-block
 		if dlen == 0 || (int(buf[0])+1) != dlen {
-			fmt.Println("Error: Inconsistent message length")
-			return nil, nil  // TODO return some error
+			return nil, fmt.Errorf("Error: Inconsistent message length")
 		} else {
 			return buf[:dlen], nil
 		}
 
 	} else {
-		// unknown group / not udp mcast, discard
-		return nil, nil  // TODO return some error
+		return nil, fmt.Errorf("unknown group / not udp mcast")
 	}
-
 }
 
 // args:
@@ -54,7 +43,8 @@ func (sock Socket) Read() ([]byte, error) {
 // - iface: name of network interface to listen to
 // - d_dl_sock:
 // - stopch:
-func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket, stopch chan bool) int {
+func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
+	stopch chan bool) int {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
 		fmt.Println("Error interface: ", err.Error())
@@ -89,32 +79,14 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket, stopch chan
 		fmt.Println("Error control message", err.Error())
 	}
 
-	c1 := utils.MakeChannel(Socket{p, group})
+	c1 := utils.MakeChannel(UMSocket{p, group})
 
 LOOP:
 	for {
 		select {
 		case v1 := <-c1:
 			fmt.Println("received UDP multicast")
-			/*if v1.err != nil {
-				fmt.Println("Error reading: ", v1.err.Error())
-				continue LOOP
-			}
-
-			// process data that are sent to group
-			if v1.cm.Dst.IsMulticast() && v1.cm.Dst.Equal(group) {
-				// TODO test this if-block
-				if v1.dlen == 0 || (int(v1.buf[0])+1) != v1.dlen {
-					fmt.Println("Error: Inconsistent message length")
-					msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
-				}
-
-				d_dl_sock.Send(string(v1.buf[:v1.dlen]), 0)
-
-			} else {
-				// unknown group / not udp mcast, discard
-				continue LOOP
-			}*/
+			// forward to coord node
 			d_dl_sock.Send(string(v1), 0)
 
 		case <-stopch:
@@ -124,18 +96,3 @@ LOOP:
 	}
 	return 0
 }
-
-/*func makeChannel(p *ipv4.PacketConn) <-chan MCastObj {
-	c := make(chan MCastObj)
-	buf := make([]byte, 1024)
-	go func() {
-		for {
-			// read incoming data into the buffer
-			// this blocks until some data are actually received
-			dlen, cm, _, err := p.ReadFrom(buf)
-			mcast_data := MCastObj{dlen, cm, err, buf}
-			c <- mcast_data
-		}
-	}()
-	return c
-}*/

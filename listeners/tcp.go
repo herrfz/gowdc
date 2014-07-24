@@ -26,7 +26,7 @@ func ListenTCP(host, tcp_port, iface string,
 	connected := 0
 
 	// control channel to stop listening to coordnode
-	ctrl := make(chan int)
+	cn_stopch := make(chan bool)
 
 	// control channel to stop listening udp mcast
 	mcast_stopch := make(chan bool)
@@ -34,7 +34,7 @@ func ListenTCP(host, tcp_port, iface string,
 	// Listen for TCP incoming connections
 	t, err := net.Listen("tcp", host+":"+tcp_port)
 	if err != nil {
-		fmt.Println("Error listening: ", err.Error())
+		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
 	// Close the listener when the application closes
@@ -48,7 +48,7 @@ func ListenTCP(host, tcp_port, iface string,
 		// this blocks until someone attempts to connect
 		t_conn, err := t.Accept()
 		if err != nil {
-			fmt.Println("Error accepting: ", err.Error())
+			fmt.Println("Error accepting:", err.Error())
 			continue
 		}
 		defer t_conn.Close()
@@ -57,13 +57,19 @@ func ListenTCP(host, tcp_port, iface string,
 			// Read the incoming data from accepted conn into the buffer
 			// this blocks until some data are actually received
 			dlen, err := t_conn.Read(buf)
-			fmt.Println("received TCP command")
+			fmt.Println("received TCP command",
+				hex.EncodeToString(buf[:dlen]))
 			if err != nil {
 				if err.Error() == "EOF" {
-					mcast_stopch <- true
+					if connected == 1 {
+						// stop listening to CoordNode
+						cn_stopch <- true
+						// stop listening UDP mcast
+						mcast_stopch <- true
+					}
 					break
 				} else {
-					fmt.Println("Error reading: ", err.Error())
+					fmt.Println("Error reading:", err.Error())
 					os.Exit(1)
 				}
 			}
@@ -123,13 +129,13 @@ func ListenTCP(host, tcp_port, iface string,
 				udpaddr, err := net.ResolveUDPAddr("udp",
 					SERVER_IP+":"+fmt.Sprintf("%d", SERVER_UDP_PORT))
 				if err != nil {
-					fmt.Println("Error resolving UDP: ", err.Error())
+					fmt.Println("Error resolving UDP:", err.Error())
 					continue
 				}
 				// dial UDP
 				u_conn, err := net.DialUDP("udp", nil, udpaddr)
 				if err != nil {
-					fmt.Println("Error server UDP: ", err.Error())
+					fmt.Println("Error server UDP:", err.Error())
 					msg.WDC_ERROR[2] = byte(msg.CONNECTING)
 					t_conn.Write(msg.WDC_ERROR)
 					continue
@@ -143,15 +149,16 @@ func ListenTCP(host, tcp_port, iface string,
 				copy(msg.WDC_CONNECTION_RES, cn_buf)
 				// reply to server
 				t_conn.Write(msg.WDC_CONNECTION_RES)
-				fmt.Println("sent connection response: ",
+				fmt.Println("sent connection response:",
 					hex.EncodeToString(msg.WDC_CONNECTION_RES))
 
 				// Serve UDP mcast in a new goroutine
 				go ListenUDPMcast(string(MCAST_ADDR),
-					fmt.Sprintf("%d", MCAST_PORT), iface, d_dl_sock, mcast_stopch)
+					fmt.Sprintf("%d", MCAST_PORT), iface, d_dl_sock,
+					mcast_stopch)
 
 				// Start listening to CoordNode
-				go ListenCoordNode(ctrl, d_ul_sock, u_conn)
+				go ListenCoordNode(d_ul_sock, u_conn, cn_stopch)
 
 				connected = 1
 
@@ -164,10 +171,9 @@ func ListenTCP(host, tcp_port, iface string,
 					msg.WDC_DISCONNECTION_REQ_ACK = []byte(req_ack)
 
 					// stop listening to CoordNode
-					//ctrl <- 1  // TODO this doesn't work yet
-
+					cn_stopch <- true
 					// stop listening UDP mcast
-					//mcast_stopch <- true
+					mcast_stopch <- true
 
 					// TODO u_conn.Close() (u_conn undefined)
 
