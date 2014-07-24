@@ -57,8 +57,6 @@ func ListenTCP(host, tcp_port, iface string,
 			// Read the incoming data from accepted conn into the buffer
 			// this blocks until some data are actually received
 			dlen, err := t_conn.Read(buf)
-			fmt.Println("received TCP command",
-				hex.EncodeToString(buf[:dlen]))
 			if err != nil {
 				if err.Error() == "EOF" {
 					if connected == 1 {
@@ -74,10 +72,13 @@ func ListenTCP(host, tcp_port, iface string,
 				}
 			}
 
-			if (int(buf[0]) + 1) != dlen {
+			if len(buf) == 0 || (int(buf[0]) + 1) != dlen {
 				fmt.Println("Error: Inconsistent message length")
 				continue
 			}
+
+			fmt.Println("received TCP command",
+				hex.EncodeToString(buf[:dlen]))
 
 			switch buf[1] {
 			case 0x01: // WDC_CONNECTION_REQ

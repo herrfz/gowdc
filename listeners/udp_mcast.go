@@ -26,7 +26,7 @@ func (sock UMSocket) Read() ([]byte, error) {
 	// process data that are sent to group
 	if cm.Dst.IsMulticast() && cm.Dst.Equal(sock.group) {
 		// TODO test this if-block
-		if dlen == 0 || (int(buf[0])+1) != dlen {
+		if len(buf) == 0 || (int(buf[0])+1) != dlen {
 			return nil, fmt.Errorf("Error: Inconsistent message length")
 		} else {
 			return buf[:dlen], nil
