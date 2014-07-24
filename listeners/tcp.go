@@ -99,7 +99,7 @@ func ListenTCP(host, tcp_port, iface string,
 				c_sock.Send(string(buf[:dlen]), 0)
 				cn_buf, _ := c_sock.Recv(0)
 
-				if int(cn_buf[0]+1) != len(cn_buf) ||
+				if int(cn_buf[0])+1 != len(cn_buf) ||
 					cn_buf[1] != 0x02 { // WDC_CONNECTION_RES
 					fmt.Println("Error on reading from CoordNode")
 					msg.WDC_ERROR[2] = byte(msg.SERIAL_PORT)
@@ -109,21 +109,16 @@ func ListenTCP(host, tcp_port, iface string,
 
 				// get multicast info
 				var MCAST_PORT uint16
-				temp_buf := bytes.NewReader(buf[8:10])
-				err := binary.Read(temp_buf, binary.LittleEndian,
-					&MCAST_PORT)
-				if err != nil {
-					fmt.Println("binary.Read failed: ", err.Error())
-				}
+				binary.Read(bytes.NewReader(buf[8:10]),
+					binary.LittleEndian, &MCAST_PORT)
 				MCAST_ADDR := buf[10 : dlen-1]
 
 				// create UDP socket to server
 				SERVER_SOCK := t_conn.RemoteAddr().String()
 				SERVER_IP := strings.Split(SERVER_SOCK, ":")[0]
 				var SERVER_UDP_PORT uint16
-				temp_buf = bytes.NewReader(buf[6:8])
-				err = binary.Read(temp_buf, binary.LittleEndian,
-					&SERVER_UDP_PORT)
+				binary.Read(bytes.NewReader(buf[6:8]),
+					binary.LittleEndian, &SERVER_UDP_PORT)
 				// create UDP address from string
 				udpaddr, err := net.ResolveUDPAddr("udp",
 					SERVER_IP+":"+fmt.Sprintf("%d", SERVER_UDP_PORT))
@@ -163,15 +158,19 @@ func ListenTCP(host, tcp_port, iface string,
 			case 0x03: // WDC_DISCONNECTION_REQ
 				fmt.Println("received disconnection request")
 				if connected == 1 {
-					// TODO stop listening UDP mcast
-					// TODO u_conn.Close() (u_conn undefined)
-
 					// send disconnect to CoordNode (bye)
 					c_sock.Send(string(buf[:dlen]), 0)
 					req_ack, _ := c_sock.Recv(0)
 					msg.WDC_DISCONNECTION_REQ_ACK = []byte(req_ack)
+
 					// stop listening to CoordNode
 					//ctrl <- 1  // TODO this doesn't work yet
+
+					// stop listening UDP mcast
+					//mcast_stopch <- true
+
+					// TODO u_conn.Close() (u_conn undefined)
+
 					// send disconnect ack to server
 					t_conn.Write(msg.WDC_DISCONNECTION_REQ_ACK)
 					fmt.Println("sent disconnection request ack, bye!")
