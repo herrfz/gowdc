@@ -27,7 +27,6 @@ func ListenTCP(host, tcp_port, iface string,
 
 	// control channel to stop listening to coordnode
 	cn_stopch := make(chan bool)
-
 	// control channel to stop listening udp mcast
 	mcast_stopch := make(chan bool)
 
@@ -68,7 +67,7 @@ func ListenTCP(host, tcp_port, iface string,
 					break
 				} else {
 					fmt.Println("Error reading:", err.Error())
-					os.Exit(1)
+					continue
 				}
 			}
 
@@ -206,7 +205,7 @@ func ListenTCP(host, tcp_port, iface string,
 					c_sock.Send(string(buf[:dlen]), 0)
 					cn_buf, _ := c_sock.Recv(0)
 
-					if int(cn_buf[0]+1) != len(cn_buf) {
+					if int(cn_buf[0])+1 != len(cn_buf) {
 						fmt.Println("Error reading from CoordNode")
 						continue
 					}
