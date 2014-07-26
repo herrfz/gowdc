@@ -14,7 +14,13 @@ type CNSocket struct {
 
 func (sock CNSocket) Read() ([]byte, error) {
 	cn_buf, err := sock.socket.Recv(0)
-	return []byte(cn_buf), err
+	if err != nil {
+		// in very very rare cases it crashes
+		// ignore for now, until I figure out why
+		return nil, fmt.Errorf("DONTPANIC")
+	} else {
+		return []byte(cn_buf), err
+	}
 }
 
 func ListenCoordNode(d_ul_sock *zmq.Socket, u_conn *net.UDPConn,
