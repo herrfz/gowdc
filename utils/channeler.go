@@ -11,7 +11,17 @@ func MakeChannel(sock SocketIn) <-chan []byte {
 		for {
 			buf, err := sock.Read()
 			if err != nil {
-				continue // don't send anything to channel
+				if err.Error() == "DONTPANIC" {
+					// non-critical error from caller
+					continue
+				} else if err.Error() == "PANIC" {
+					// critical error
+					break
+				} else {
+					// on all other errors, stop goroutine
+					break
+				}
+
 			} else {
 				c <- buf
 			}

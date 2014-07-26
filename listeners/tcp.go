@@ -71,7 +71,7 @@ func ListenTCP(host, tcp_port, iface string,
 				}
 			}
 
-			if len(buf) == 0 || (int(buf[0]) + 1) != dlen {
+			if len(buf) == 0 || (int(buf[0])+1) != dlen {
 				fmt.Println("Error: Inconsistent message length")
 				continue
 			}

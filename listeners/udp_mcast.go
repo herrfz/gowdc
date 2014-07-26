@@ -7,6 +7,7 @@ import (
 	"github.com/herrfz/gowdc/utils"
 	zmq "github.com/pebbe/zmq4"
 	"net"
+	"strings"
 )
 
 type UMSocket struct {
@@ -20,7 +21,11 @@ func (sock UMSocket) Read() ([]byte, error) {
 	// this blocks until some data are actually received
 	dlen, cm, _, err := sock.socket.ReadFrom(buf)
 	if err != nil {
-		return nil, err
+		if strings.Contains(err.Error(), "use of closed network connection") {
+			return nil, fmt.Errorf("PANIC")
+		} else {
+			return nil, err
+		}
 	}
 
 	// process data that are sent to group
@@ -44,24 +49,21 @@ func (sock UMSocket) Read() ([]byte, error) {
 // - d_dl_sock:
 // - stopch:
 func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
-	stopch chan bool) int {
+	stopch chan bool) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
-		fmt.Println("Error interface: ", err.Error())
-		return 1
+		panic(fmt.Sprintf("Error interface: %s", err.Error()))
 	}
 
 	group := net.ParseIP(addr)
 	if group == nil {
-		fmt.Println("Error: invalid group address")
-		return 1
+		panic(fmt.Sprintf("Error: invalid group address"))
 	}
 
 	// listen to all udp packets on mcast port
 	c, err := net.ListenPacket("udp4", "0.0.0.0:"+port)
 	if err != nil {
-		fmt.Println("Error listening for mcast: ", err.Error())
-		return 1
+		panic(fmt.Sprintf("Error listening for mcast: %s", err.Error()))
 	}
 	// close the listener when the application closes
 	defer c.Close()
@@ -69,8 +71,7 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
 	// join mcast group
 	p := ipv4.NewPacketConn(c)
 	if err := p.JoinGroup(eth, &net.UDPAddr{IP: group}); err != nil {
-		fmt.Println("Error joining: ", err.Error())
-		return 1
+		panic(fmt.Sprintf("Error joining: %s", err.Error()))
 	}
 	fmt.Println("Listening on " + addr + ":" + port)
 
@@ -94,5 +95,4 @@ LOOP:
 		}
 
 	}
-	return 0
 }
