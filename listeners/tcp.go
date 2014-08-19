@@ -63,6 +63,7 @@ func ListenTCP(host, tcp_port, iface string,
 						cn_stopch <- true
 						// stop listening UDP mcast
 						mcast_stopch <- true
+						connected = 0
 					}
 					break
 				} else {
