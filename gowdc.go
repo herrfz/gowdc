@@ -7,7 +7,7 @@ import (
 
 const (
 	HOST      = "localhost"
-	TCP_PORT  = "33401"
+	TCP_PORT  = "33400"
 	INTERFACE = "eth0"
 )
 

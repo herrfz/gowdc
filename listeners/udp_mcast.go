@@ -7,6 +7,7 @@ import (
 	"github.com/herrfz/gowdc/utils"
 	zmq "github.com/pebbe/zmq4"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -52,18 +53,21 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
 	stopch chan bool) {
 	eth, err := net.InterfaceByName(iface)
 	if err != nil {
-		panic(fmt.Sprintf("Error interface: %s", err.Error()))
+		fmt.Println("Error interface:", err.Error())
+		os.Exit(1)
 	}
 
 	group := net.ParseIP(addr)
 	if group == nil {
-		panic(fmt.Sprintf("Error: invalid group address"))
+		fmt.Println("Error: invalid group address:", addr)
+		os.Exit(1)
 	}
 
 	// listen to all udp packets on mcast port
 	c, err := net.ListenPacket("udp4", "0.0.0.0:"+port)
 	if err != nil {
-		panic(fmt.Sprintf("Error listening for mcast: %s", err.Error()))
+		fmt.Println("Error listening for mcast:", err.Error())
+		os.Exit(1)
 	}
 	// close the listener when the application closes
 	defer c.Close()
@@ -71,7 +75,8 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
 	// join mcast group
 	p := ipv4.NewPacketConn(c)
 	if err := p.JoinGroup(eth, &net.UDPAddr{IP: group}); err != nil {
-		panic(fmt.Sprintf("Error joining: %s", err.Error()))
+		fmt.Println("Error joining:", err.Error())
+		os.Exit(1)
 	}
 	fmt.Println("Listening on " + addr + ":" + port)
 
