@@ -12,7 +12,7 @@ type CNSocket struct {
 	socket *zmq.Socket
 }
 
-func (sock CNSocket) Read() ([]byte, error) {
+func (sock CNSocket) ReadDevice() ([]byte, error) {
 	cn_buf, err := sock.socket.Recv(0)
 	if err != nil {
 		// in very very rare cases it crashes
@@ -23,12 +23,7 @@ func (sock CNSocket) Read() ([]byte, error) {
 	}
 }
 
-func (sock CNSocket) ReadSerial() ([]byte, error) {
-	return nil, nil
-}
-
-func ListenCoordNode(d_ul_sock *zmq.Socket, u_conn *net.UDPConn,
-	stopch chan bool) {
+func ListenCoordNode(d_ul_sock *zmq.Socket, u_conn *net.UDPConn, stopch chan bool) {
 	fmt.Println("Listening to coordinator node uplink")
 
 	cn_ch := utils.MakeChannel(CNSocket{d_ul_sock})

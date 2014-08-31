@@ -16,7 +16,7 @@ type UMSocket struct {
 	group  net.IP
 }
 
-func (sock UMSocket) Read() ([]byte, error) {
+func (sock UMSocket) ReadDevice() ([]byte, error) {
 	buf := make([]byte, 1024)
 	// read incoming data into the buffer
 	// this blocks until some data are actually received
@@ -41,10 +41,6 @@ func (sock UMSocket) Read() ([]byte, error) {
 	} else {
 		return nil, fmt.Errorf("unknown group / not udp mcast")
 	}
-}
-
-func (sock UMSocket) ReadSerial() ([]byte, error) {
-	return nil, nil
 }
 
 // args:
