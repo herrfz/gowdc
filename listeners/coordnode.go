@@ -23,6 +23,10 @@ func (sock CNSocket) Read() ([]byte, error) {
 	}
 }
 
+func (sock CNSocket) ReadSerial() ([]byte, error) {
+	return nil, nil
+}
+
 func ListenCoordNode(d_ul_sock *zmq.Socket, u_conn *net.UDPConn,
 	stopch chan bool) {
 	fmt.Println("Listening to coordinator node uplink")

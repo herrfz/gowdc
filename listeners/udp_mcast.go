@@ -43,6 +43,10 @@ func (sock UMSocket) Read() ([]byte, error) {
 	}
 }
 
+func (sock UMSocket) ReadSerial() ([]byte, error) {
+	return nil, nil
+}
+
 // args:
 // - addr: multicast group/address to listen to
 // - port: port number; addr:port builds the mcast socket
