@@ -1,17 +1,20 @@
 package main
 
 import (
+	"flag"
 	"github.com/herrfz/gowdc/listeners"
 	zmq "github.com/pebbe/zmq4"
 )
 
 const (
 	HOST      = "localhost"
-	TCP_PORT  = "33400"
 	INTERFACE = "eth0"
 )
 
 func main() {
+	port := flag.String("port", "33400", "TCP port to listen")
+	flag.Parse()
+
 	c_sock, _ := zmq.NewSocket(zmq.REQ)
 	defer c_sock.Close()
 	c_sock.Connect("tcp://localhost:5555")
@@ -25,7 +28,7 @@ func main() {
 	d_ul_sock.Connect("tcp://localhost:5557")
 
 	// Handle connections in a goroutine
-	go listeners.ListenTCP(HOST, TCP_PORT, INTERFACE,
+	go listeners.ListenTCP(HOST, *port, INTERFACE,
 		c_sock, d_dl_sock, d_ul_sock)
 	select {}
 }
