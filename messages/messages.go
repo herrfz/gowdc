@@ -5,17 +5,19 @@ package messages
 // Messages
 //
 var (
-	WDC_ERROR                      = make([]byte, 3)
-	WDC_CONNECTION_RES             = make([]byte, 10)
-	WDC_DISCONNECTION_REQ          = make([]byte, 2)
-	WDC_DISCONNECTION_REQ_ACK      = make([]byte, 2)
-	WDC_GET_STATUS_RES             = make([]byte, 64)
-	WDC_SET_COOR_LONG_ADDR_REQ_ACK = make([]byte, 2)
-	WDC_RESET_REQ_ACK              = make([]byte, 2)
-	WDC_ACK                        = make([]byte, 2)
-	WDC_GET_TDMA_RES               = make([]byte, 24)
-	WDC_MAC_DATA_CON               = make([]byte, 4)
-	WDC_MAC_DATA_IND               = make([]byte, 135)
+	WDC_ERROR                       = make([]byte, 3)
+	WDC_CONNECTION_RES              = make([]byte, 10)
+	WDC_DISCONNECTION_REQ           = make([]byte, 2)
+	WDC_DISCONNECTION_REQ_ACK       = make([]byte, 2)
+	WDC_GET_STATUS_RES              = make([]byte, 64)
+	WDC_SET_COOR_LONG_ADDR_REQ_ACK  = make([]byte, 2)
+	WDC_RESET_REQ_ACK               = make([]byte, 2)
+	WDC_ACK                         = make([]byte, 2)
+	WDC_GET_TDMA_RES                = make([]byte, 24)
+	WDC_MAC_DATA_CON                = make([]byte, 4)
+	WDC_MAC_DATA_IND                = make([]byte, 135)
+	WDC_REPLACE_SECURITY_POLICY_ACK = make([]byte, 3)
+	WDC_REPLACE_SESSIONKEYS_ACK     = make([]byte, 3)
 )
 
 //
@@ -40,4 +42,6 @@ func init() {
 	copy(WDC_GET_TDMA_RES[:], []byte{23, 0x16})
 	copy(WDC_MAC_DATA_CON[:], []byte{3, 0x18})
 	copy(WDC_MAC_DATA_IND[:], []byte{134, 0x19})
+	copy(WDC_REPLACE_SECURITY_POLICY_ACK[:], []byte{2, 0x0B})
+	copy(WDC_REPLACE_SESSIONKEYS_ACK[:], []byte{2, 0x0D})
 }

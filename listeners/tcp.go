@@ -225,6 +225,36 @@ func ListenTCP(host, tcp_port, iface string,
 					}
 				}
 
+			case 0x0A:
+				// WDC_REPLACE_SECURITY_POLICY
+				fmt.Println("received replace security policy")
+				if connected == 0 {
+					msg.WDC_ERROR[2] = byte(msg.BUSY_CONNECTED) // TODO: not correct semantically
+					t_conn.Write(msg.WDC_ERROR)
+					continue
+				}
+
+				fmt.Println("replace security policy command:", hex.EncodeToString(buf))
+
+				msg.WDC_REPLACE_SECURITY_POLICY_ACK[2] = 0x00
+				t_conn.Write(msg.WDC_REPLACE_SECURITY_POLICY_ACK)
+				fmt.Println("sent replace security policy ack")
+
+			case 0x0C:
+				// WDC_REPLACE_SESSION_KEYS
+				fmt.Println("received replace session keys")
+				if connected == 0 {
+					msg.WDC_ERROR[2] = byte(msg.BUSY_CONNECTED) // TODO: not correct semantically
+					t_conn.Write(msg.WDC_ERROR)
+					continue
+				}
+
+				fmt.Println("replace session keys command:", hex.EncodeToString(buf))
+
+				msg.WDC_REPLACE_SESSIONKEYS_ACK[2] = 0x00
+				t_conn.Write(msg.WDC_REPLACE_SESSIONKEYS_ACK)
+				fmt.Println("sent replace session keys ack")
+
 			default:
 				fmt.Println("received unknown command")
 				msg.WDC_ERROR[2] = byte(msg.WRONG_CMD)
