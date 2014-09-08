@@ -234,7 +234,7 @@ func ListenTCP(host, tcp_port, iface string,
 					continue
 				}
 
-				fmt.Println("replace security policy command:", hex.EncodeToString(buf))
+				fmt.Println("replace security policy command:", hex.EncodeToString(buf[:dlen]))
 
 				msg.WDC_REPLACE_SECURITY_POLICY_ACK[2] = 0x00
 				t_conn.Write(msg.WDC_REPLACE_SECURITY_POLICY_ACK)
@@ -249,7 +249,7 @@ func ListenTCP(host, tcp_port, iface string,
 					continue
 				}
 
-				fmt.Println("replace session keys command:", hex.EncodeToString(buf))
+				fmt.Println("replace session keys command:", hex.EncodeToString(buf[:dlen]))
 
 				msg.WDC_REPLACE_SESSIONKEYS_ACK[2] = 0x00
 				t_conn.Write(msg.WDC_REPLACE_SESSIONKEYS_ACK)
