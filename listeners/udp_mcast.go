@@ -4,7 +4,7 @@ package listeners
 import (
 	"code.google.com/p/go.net/ipv4"
 	"fmt"
-	"github.com/herrfz/gowdc/utils"
+	"github.com/herrfz/devreader"
 	zmq "github.com/pebbe/zmq4"
 	"net"
 	"os"
@@ -85,7 +85,7 @@ func ListenUDPMcast(addr, port, iface string, d_dl_sock *zmq.Socket,
 		fmt.Println("Error control message", err.Error())
 	}
 
-	c1 := utils.MakeChannel(UMSocket{p, group})
+	c1 := devreader.MakeChannel(UMSocket{p, group})
 
 LOOP:
 	for {

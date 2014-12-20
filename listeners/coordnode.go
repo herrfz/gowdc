@@ -3,7 +3,7 @@ package listeners
 
 import (
 	"fmt"
-	"github.com/herrfz/gowdc/utils"
+	"github.com/herrfz/devreader"
 	zmq "github.com/pebbe/zmq4"
 	"net"
 )
@@ -26,7 +26,7 @@ func (sock CNSocket) ReadDevice() ([]byte, error) {
 func ListenCoordNode(d_ul_sock *zmq.Socket, u_conn *net.UDPConn, stopch chan bool) {
 	fmt.Println("Listening to coordinator node uplink")
 
-	cn_ch := utils.MakeChannel(CNSocket{d_ul_sock})
+	cn_ch := devreader.MakeChannel(CNSocket{d_ul_sock})
 
 LOOP:
 	for {
