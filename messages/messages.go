@@ -42,6 +42,6 @@ func init() {
 	copy(WDC_GET_TDMA_RES[:], []byte{23, 0x16})
 	copy(WDC_MAC_DATA_CON[:], []byte{3, 0x18})
 	copy(WDC_MAC_DATA_IND[:], []byte{134, 0x19})
-	copy(WDC_REPLACE_SECURITY_POLICY_ACK[:], []byte{2, 0x0B})
-	copy(WDC_REPLACE_SESSIONKEYS_ACK[:], []byte{2, 0x0D})
+	copy(WDC_REPLACE_SECURITY_POLICY_ACK[:], []byte{2, 0x0C})
+	copy(WDC_REPLACE_SESSIONKEYS_ACK[:], []byte{2, 0x0E})
 }
